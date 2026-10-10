@@ -96,3 +96,17 @@ def test_original_dataframe_is_not_modified():
     calculate_campaign_metrics(df)
 
     pd.testing.assert_frame_equal(df, original)
+
+
+def test_non_numeric_metric_values_raise_clear_error():
+    df = pd.DataFrame(
+        {
+            "impressions": ["not-a-number"],
+            "clicks": [100],
+            "spend": [50.0],
+            "conversions": [10],
+        }
+    )
+
+    with pytest.raises(ValueError, match="numeric"):
+        calculate_campaign_metrics(df)
