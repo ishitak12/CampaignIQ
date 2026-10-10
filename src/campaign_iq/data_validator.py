@@ -132,7 +132,9 @@ def validate_campaign_data(df: pd.DataFrame) -> list[ValidationIssue]:
                     ),
                     severity="warning",
                     row_index=int(row_index),
+                    column="Clicks, Total_Conversion",
                 )
             )
 
+        
     return issues
