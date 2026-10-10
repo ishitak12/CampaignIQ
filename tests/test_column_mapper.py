@@ -64,3 +64,17 @@ def test_maps_safe_aliases():
         "date": "Reporting date",
         "currency": "Currency code",
     }
+
+
+def test_maps_spent_to_spend():
+    result = map_columns(["Spent"])
+
+    assert result.mapping["spend"] == "Spent"
+    assert "Spent" not in result.unmapped_columns
+
+
+def test_maps_total_conversion_to_conversions():
+    result = map_columns(["Total_Conversion"])
+
+    assert result.mapping["conversions"] == "Total_Conversion"
+    assert "Total_Conversion" not in result.unmapped_columns

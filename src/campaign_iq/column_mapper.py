@@ -27,9 +27,11 @@ COLUMN_ALIASES = {
     "spend": {
         "spend",
         "amount spent",
+        "spent"
     },
     "conversions": {
         "conversions",
+        "total conversion"
     },
     "revenue": {
         "revenue",
