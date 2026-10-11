@@ -16,28 +16,45 @@ class ValidationIssue:
     column: str | None = None
 
 
-NON_NEGATIVE_COLUMNS = {
-    "Impressions",
-    "Clicks",
-    "Spent",
-    "Total_Conversion",
-    "Approved_Conversion",
+COLUMN_ALIASES = {
+    "impressions": ("impressions", "Impressions"),
+    "clicks": ("clicks", "Clicks"),
+    "spend": ("spend", "Spent"),
+    "conversions": ("conversions", "Total_Conversion"),
+    "approved_conversions": (
+        "approved_conversions",
+        "Approved_Conversion",
+    ),
 }
 
 
-def validate_campaign_data(df: pd.DataFrame) -> list[ValidationIssue]:
-    """
-    Check campaign data for basic quality issues.
+def _find_column(
+    df: pd.DataFrame,
+    canonical_name: str,
+) -> str | None:
+    """Find a supported source or canonical column name."""
 
-    This function reports problems without modifying the input DataFrame.
+    for column in COLUMN_ALIASES[canonical_name]:
+        if column in df.columns:
+            return column
+
+    return None
+
+
+def validate_campaign_data(
+    df: pd.DataFrame,
+) -> list[ValidationIssue]:
     """
+    Validate campaign data using canonical or recognized legacy names.
+
+    Reports issues without modifying the input DataFrame.
+    """
+
     issues: list[ValidationIssue] = []
 
-    # 1. Report missing values in the supplied data.
+    # 1. Report missing values in any supplied column.
     for column in df.columns:
-        missing_rows = df.index[df[column].isna()].tolist()
-
-        for row_index in missing_rows:
+        for row_index in df.index[df[column].isna()]:
             issues.append(
                 ValidationIssue(
                     code="missing_value",
@@ -47,14 +64,22 @@ def validate_campaign_data(df: pd.DataFrame) -> list[ValidationIssue]:
                 )
             )
 
-    # 2. Check that selected advertising metrics are non-negative.
-    for column in NON_NEGATIVE_COLUMNS:
-        if column not in df.columns:
+    # 2. Check that advertising metrics are non-negative.
+    for name in (
+        "impressions",
+        "clicks",
+        "spend",
+        "conversions",
+        "approved_conversions",
+    ):
+        column = _find_column(df, name)
+
+        if column is None:
             continue
 
-        numeric_values = pd.to_numeric(df[column], errors="coerce")
+        values = pd.to_numeric(df[column], errors="coerce")
 
-        for row_index in df.index[numeric_values < 0]:
+        for row_index in df.index[values < 0]:
             issues.append(
                 ValidationIssue(
                     code="negative_value",
@@ -64,10 +89,17 @@ def validate_campaign_data(df: pd.DataFrame) -> list[ValidationIssue]:
                 )
             )
 
-    # 3. Clicks should not exceed impressions for comparable metrics.
-    if {"Clicks", "Impressions"}.issubset(df.columns):
-        clicks = pd.to_numeric(df["Clicks"], errors="coerce")
-        impressions = pd.to_numeric(df["Impressions"], errors="coerce")
+    # 3. Clicks should not exceed impressions.
+    clicks_column = _find_column(df, "clicks")
+    impressions_column = _find_column(df, "impressions")
+
+    if clicks_column and impressions_column:
+        clicks = pd.to_numeric(
+            df[clicks_column], errors="coerce"
+        )
+        impressions = pd.to_numeric(
+            df[impressions_column], errors="coerce"
+        )
 
         invalid_rows = df.index[
             clicks.notna()
@@ -84,18 +116,22 @@ def validate_campaign_data(df: pd.DataFrame) -> list[ValidationIssue]:
                 )
             )
 
-    # 4. Approved conversions should not exceed total conversions
-    # when both columns use compatible definitions and units.
-    if {"Approved_Conversion", "Total_Conversion"}.issubset(df.columns):
+    # 4. Approved conversions should not exceed total conversions.
+    approved_column = _find_column(df, "approved_conversions")
+    conversions_column = _find_column(df, "conversions")
+
+    if approved_column and conversions_column:
         approved = pd.to_numeric(
-            df["Approved_Conversion"], errors="coerce"
+            df[approved_column], errors="coerce"
         )
-        total = pd.to_numeric(df["Total_Conversion"], errors="coerce")
+        conversions = pd.to_numeric(
+            df[conversions_column], errors="coerce"
+        )
 
         invalid_rows = df.index[
             approved.notna()
-            & total.notna()
-            & (approved > total)
+            & conversions.notna()
+            & (approved > conversions)
         ]
 
         for row_index in invalid_rows:
@@ -107,12 +143,13 @@ def validate_campaign_data(df: pd.DataFrame) -> list[ValidationIssue]:
                 )
             )
 
-    # 5. Flag conversions recorded with zero clicks for review.
-    # This is a warning, not proof of invalid data.
-    if {"Clicks", "Total_Conversion"}.issubset(df.columns):
-        clicks = pd.to_numeric(df["Clicks"], errors="coerce")
+    # 5. Flag conversions with zero clicks for review.
+    if clicks_column and conversions_column:
+        clicks = pd.to_numeric(
+            df[clicks_column], errors="coerce"
+        )
         conversions = pd.to_numeric(
-            df["Total_Conversion"], errors="coerce"
+            df[conversions_column], errors="coerce"
         )
 
         suspicious_rows = df.index[
@@ -132,9 +169,8 @@ def validate_campaign_data(df: pd.DataFrame) -> list[ValidationIssue]:
                     ),
                     severity="warning",
                     row_index=int(row_index),
-                    column="Clicks, Total_Conversion",
+                    column=f"{clicks_column}, {conversions_column}",
                 )
             )
 
-        
     return issues
