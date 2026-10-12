@@ -108,3 +108,39 @@ def test_maps_additional_advertising_aliases():
     assert result.unmapped_columns == []
     assert result.review_columns == {}
 
+
+def test_maps_mixed_platform_headers_and_flags_review_columns():
+    columns = [
+        "Campaign",
+        "Reporting Date",
+        "Impressions",
+        "Link Clicks",
+        "Amount Spent",
+        "Results",
+        "Ad Set Name",
+    ]
+
+    result = map_columns(columns)
+
+    # Recognized, unambiguous headers map automatically.
+    assert result.mapping == {
+        "campaign_name": "Campaign",
+        "date": "Reporting Date",
+        "impressions": "Impressions",
+        "spend": "Amount Spent",
+    }
+
+    # These fields need human review before being used as metrics.
+    assert result.review_columns == {
+        "Link Clicks": (
+            "Confirm whether link clicks should be treated separately from clicks."
+        ),
+        "Results": (
+            "Results can represent different actions depending on the report."
+        ),
+    }
+
+    # Unknown platform-specific fields are preserved for inspection.
+    assert result.unmapped_columns == ["Ad Set Name"]
+    assert result.conflicts == {}
+
