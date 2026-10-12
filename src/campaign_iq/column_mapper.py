@@ -6,6 +6,7 @@ import re
 
 # Only map aliases whose meaning is sufficiently clear.
 # We can add platform-specific rules after examining real reports.
+
 COLUMN_ALIASES = {
     "campaign_name": {
         "campaign name",
@@ -20,18 +21,29 @@ COLUMN_ALIASES = {
     },
     "impressions": {
         "impressions",
+        "impression",
+        "impr",
+        "impr.",
     },
     "clicks": {
         "clicks",
+        "click",
     },
     "spend": {
         "spend",
         "amount spent",
-        "spent"
+        "spent",
+        "total spend",
+        "total spent",
+        "ad spend",
+        "advertising spend",
     },
     "conversions": {
         "conversions",
-        "total conversion"
+        "conversion",
+        "total conversion",
+        "total conversions",
+        "conversion count",
     },
     "revenue": {
         "revenue",
@@ -41,6 +53,8 @@ COLUMN_ALIASES = {
         "currency code",
     },
 }
+
+
 
 
 # These names may refer to different metrics depending on

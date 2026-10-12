@@ -78,3 +78,33 @@ def test_maps_total_conversion_to_conversions():
 
     assert result.mapping["conversions"] == "Total_Conversion"
     assert "Total_Conversion" not in result.unmapped_columns
+
+
+
+def test_maps_additional_advertising_aliases():
+    columns = [
+        "Impr.",
+        "Click",
+        "Total Spend",
+        "Total Conversions",
+        "Conversion Count",
+    ]
+
+    result = map_columns(columns)
+
+    # Unambiguous columns should still be mapped.
+    assert result.mapping == {
+        "impressions": "Impr.",
+        "clicks": "Click",
+        "spend": "Total Spend",
+    }
+
+    # Both conversion headers match the same field,
+    # so CampaignIQ must flag a conflict.
+    assert result.conflicts == {
+        "conversions": ["Total Conversions", "Conversion Count"]
+    }
+
+    assert result.unmapped_columns == []
+    assert result.review_columns == {}
+
